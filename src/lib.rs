@@ -1,105 +1,46 @@
-// struct Point {} // Private
-// struct Matrix {} // Private
+/*!
+Provides very basic OpenGL backed drawing commands.
 
-// struct Path {isHole, points}
+# Examples
 
-// enum CompositeOperation {
-//    SourceOver
-//    SourceIn
-//    SourceOut
-//    Atop              // SourceAtop?
-//    DestinationOver
-//    DestinationIn
-//    DestinationOut
-//    DestinationAtop
-//    Lighter
-//    Copy
-//    Xor
-// }
+```
+use picasso::{Window, Canvas};
 
-// trait FillStyle {CompositeOperation}
-// struct LinearGradient {}
-// struct RadialGradient {}
-// struct BoxGradient {}     // Needed?
-// struct Image {}
-// struct SolidColor {}
+fn main() {
+    let mut window = Window::new();
 
+    let first_rect: Canvas = Canvas::new()
+        .move_to(0.0, 0.0)
+        .line_to(0.5, 0.0)
+        .line_to(0.5, 0.5)
+        .line_to(0.0, 0.5)
+        .fill(1.0, 0.0, 0.0, 1.0);
 
-// // Consists of one or more paths, a transform, a fill, and a translation
-// // Some paths may describe a "hole"
-// struct Figure {
-//    paths: Vec<Path>
-//    transform: Matrix
-//    fillStyles: Vec<FillStyle>
-// }
+    let second_rect: Canvas = Canvas::new()
+        .move_to(-0.1, -0.1)
+        .line_to(-0.5, -0.1)
+        .line_to(-0.5, -0.5)
+        .line_to(-0.1, -0.5)
+        .fill(0.0, 1.0, 0.0, 1.0);
 
-// impl Figure {
-//    fn new(Paths, Transform, FillStyles);
-// }
-// impl FigureBuilder {
-//    // Translation
-//    translate()
-//    rotate()
-//    scale()
-//    skew()
-//    matrix()
+    let both_rects: Canvas = Canvas::new()
+         .attach(&first_rect)
+         .attach(&second_rect);
 
-//    // Path describing
-//    line_to()
-//    bezier_to()
-//    quadratic_to()
-//    arc_to()
-//    is_hole()
-//    move_to() // Start new path
-//    close()   // Start new path
+    while window.running {
+        window.render(&both_rects);
+    }
+}
+```
+*/
 
 
-//    // Fill
-//    fill(FillStyle)     // Ends the builder, producing a Figure
-//    fill_and(FillStyle) // Doesn't end the builder
-// }
+extern crate gl;
+extern crate glutin;
 
+mod canvas;
+mod shader_program;
+mod window;
 
-// struct Canvas {figures: Vec<Figure>}
-// impl Canvas {
-//    draw(windowWidth, windowHeight, pixelRatio)
-// }
-
-// // A Path is a collection of points describing a possibly closed shape
-// // A Figure is a collection of paths, some of which may subtract from the others, along with a translation, fill
-// // A Canvas is a collection of Figures describing an entire scene
-// // Calling draw will execute openGL calls. To improve performance
-// // collect all figures into a single canvas and pass that to draw instead
-// // A canvas also lets you control anti-aliasing, highdpi, and other options?
-
-
-// // Helper functions - return figures - I'm leaning against having these in the main library. Will need to test ergonomics
-//    // Path creating (Last point should probably be undefined after this. Who knows where it could be? But people will still use it. So may as well make it defined. It's not like it really matters)
-//    add_path()
-//    arc()
-//    rect()
-//    rounded_rect()
-//    circle()
-//    ellipse()
-
-
-
-// // I don't know that I want this to be part of the Figure builder
-//    // Path Modifying
-//    stroke(strokeWidth, miter, bevel) // Actually modifies all paths, duplicating them and scaling them to produce the correct stroke style
-
-
-// const TransformIdentity
-
-
-
-
-
-
-
-// #[cfg(test)]
-// mod tests {
-//     #[test]
-//     fn it_works() {
-//     }
-// }
+pub use self::canvas::Canvas;
+pub use self::window::Window;
