@@ -5,5 +5,5 @@ authors = ["Jayshua Nelson <me@jayshuanelson.com>"]
 
 
 [dependencies]
-gl = "*"
-glutin = "*"
+gl = "0.6.2"
+glutin = "0.8.1"
