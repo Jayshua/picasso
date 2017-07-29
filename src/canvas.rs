@@ -7,7 +7,40 @@ use std::mem;
 pub struct Canvas {
   points: Vec<Point>,
   figures: Vec<Figure>,
-  path_in_progress: Vec<(usize, usize)>
+  path_in_progress: Vec<(usize, usize)>,
+  transform: Matrix,
+}
+
+
+fn matrix_multiply(left: Matrix, right: Matrix) -> Matrix {
+   // a b c   0 1 2
+   // d e f   3 4 5
+   // g h i   6 7 8
+
+   let a = left[0] * right[0] + left[1] * right[3] + left[2] * right[6];
+   let b = left[0] * right[1] + left[1] * right[4] + left[2] * right[7];
+   let c = left[0] * right[2] + left[1] * right[5] + left[2] * right[8];
+
+   let d = left[3] * right[0] + left[4] * right[3] + left[5] * right[6];
+   let e = left[3] * right[1] + left[4] * right[4] + left[5] * right[7];
+   let f = left[3] * right[2] + left[4] * right[5] + left[5] * right[8];
+
+   let g = left[6] * right[0] + left[7] * right[3] + left[8] * right[6];
+   let h = left[6] * right[1] + left[7] * right[4] + left[8] * right[7];
+   let i = left[6] * right[2] + left[7] * right[5] + left[8] * right[8];
+
+   [
+      a, b, c,
+      d, e, f,
+      g, h, i,
+   ]
+}
+
+fn matrix_point_mul(matrix: Matrix, point: Point) -> Point {
+   (
+      matrix[0] * point.0 + matrix[1] * point.1 + matrix[2],
+      matrix[3] * point.0 + matrix[4] * point.1 + matrix[5],
+   )
 }
 
 
@@ -16,14 +49,45 @@ impl Canvas {
       Canvas {
          points: vec![],
          figures: vec![],
-         path_in_progress: vec![]
+         path_in_progress: vec![],
+         transform: [
+            1.0, 0.0, 0.0,
+            0.0, 1.0, 0.0,
+            0.0, 0.0, 1.0,
+         ],
       }
+   }
+
+
+   pub fn rotate(mut self, angle: f32) -> Self {
+      let rotation_matrix = [
+         angle.cos(), -angle.sin(), 0.0,
+         angle.sin(),  angle.cos(), 0.0,
+         0.0,          0.0,         1.0,
+      ];
+
+      self.transform = matrix_multiply(self.transform, rotation_matrix);
+
+      self
+   }
+
+
+   pub fn translate(mut self, x: f32, y: f32) -> Self {
+      let translation_matrix = [
+         1.0, 0.0, x,
+         0.0, 1.0, y,
+         0.0, 0.0, 1.0,
+      ];
+
+      self.transform = matrix_multiply(self.transform, translation_matrix);
+
+      self
    }
 
 
    /// Draw a line to the provided points
    pub fn line_to(mut self, x: f32, y: f32) -> Self {
-      self.points.push((x, y));
+      self.points.push(matrix_point_mul(self.transform, (x, y)));
 
       if self.path_in_progress.len() == 0 {
          self.path_in_progress.push((self.points.len() - 1, 1));
@@ -37,9 +101,19 @@ impl Canvas {
 
    /// Move the virtual "pen" to new coordinates without connecting them with a line
    pub fn move_to(mut self, x: f32, y: f32) -> Self {
-      self.points.push((x, y));
+      self.points.push(matrix_point_mul(self.transform, (x, y)));
       self.path_in_progress.push((self.points.len() - 1, 1));
       self
+   }
+
+
+   /// Draw a rectangle
+   pub fn rectangle(mut self, x: f32, y: f32, width: f32, height: f32) -> Self {
+      self
+         .move_to(x, y)
+         .line_to(x + width, y)
+         .line_to(x + width, y + height)
+         .line_to(x, y + height)
    }
 
 
@@ -88,6 +162,10 @@ impl Canvas {
 
 
 type Point = (f32, f32);
+type Matrix = [f32; 9];
+// 0 1 2
+// 3 4 5
+// 6 7 8
 
 #[derive(Debug)]
 pub struct Figure {
