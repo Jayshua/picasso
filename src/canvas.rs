@@ -1,5 +1,6 @@
-#![allow(dead_code)]
 use std::mem;
+use super::geometry::Matrix;
+use super::geometry::Point;
 
 /// Used to create shapes by calling `line_to` and `move_to`.
 /// Pass this to a Window to render
@@ -12,37 +13,6 @@ pub struct Canvas {
 }
 
 
-fn matrix_multiply(left: Matrix, right: Matrix) -> Matrix {
-   // a b c   0 1 2
-   // d e f   3 4 5
-   // g h i   6 7 8
-
-   let a = left[0] * right[0] + left[1] * right[3] + left[2] * right[6];
-   let b = left[0] * right[1] + left[1] * right[4] + left[2] * right[7];
-   let c = left[0] * right[2] + left[1] * right[5] + left[2] * right[8];
-
-   let d = left[3] * right[0] + left[4] * right[3] + left[5] * right[6];
-   let e = left[3] * right[1] + left[4] * right[4] + left[5] * right[7];
-   let f = left[3] * right[2] + left[4] * right[5] + left[5] * right[8];
-
-   let g = left[6] * right[0] + left[7] * right[3] + left[8] * right[6];
-   let h = left[6] * right[1] + left[7] * right[4] + left[8] * right[7];
-   let i = left[6] * right[2] + left[7] * right[5] + left[8] * right[8];
-
-   [
-      a, b, c,
-      d, e, f,
-      g, h, i,
-   ]
-}
-
-fn matrix_point_mul(matrix: Matrix, point: Point) -> Point {
-   (
-      matrix[0] * point.0 + matrix[1] * point.1 + matrix[2],
-      matrix[3] * point.0 + matrix[4] * point.1 + matrix[5],
-   )
-}
-
 
 impl Canvas {
    pub fn new() -> Canvas {
@@ -50,44 +20,26 @@ impl Canvas {
          points: vec![],
          figures: vec![],
          path_in_progress: vec![],
-         transform: [
-            1.0, 0.0, 0.0,
-            0.0, 1.0, 0.0,
-            0.0, 0.0, 1.0,
-         ],
+         transform: Matrix::identity(),
       }
    }
 
 
    pub fn rotate(mut self, angle: f32) -> Self {
-      let rotation_matrix = [
-         angle.cos(), -angle.sin(), 0.0,
-         angle.sin(),  angle.cos(), 0.0,
-         0.0,          0.0,         1.0,
-      ];
-
-      self.transform = matrix_multiply(self.transform, rotation_matrix);
-
+      self.transform = self.transform * Matrix::from_rotation(angle);
       self
    }
 
 
    pub fn translate(mut self, x: f32, y: f32) -> Self {
-      let translation_matrix = [
-         1.0, 0.0, x,
-         0.0, 1.0, y,
-         0.0, 0.0, 1.0,
-      ];
-
-      self.transform = matrix_multiply(self.transform, translation_matrix);
-
+      self.transform = self.transform * Matrix::from_translation(x, y);
       self
    }
 
 
    /// Draw a line to the provided points
    pub fn line_to(mut self, x: f32, y: f32) -> Self {
-      self.points.push(matrix_point_mul(self.transform, (x, y)));
+      self.points.push(Point::new(x, y));
 
       if self.path_in_progress.len() == 0 {
          self.path_in_progress.push((self.points.len() - 1, 1));
@@ -101,14 +53,14 @@ impl Canvas {
 
    /// Move the virtual "pen" to new coordinates without connecting them with a line
    pub fn move_to(mut self, x: f32, y: f32) -> Self {
-      self.points.push(matrix_point_mul(self.transform, (x, y)));
+      self.points.push(Point::new(x, y));
       self.path_in_progress.push((self.points.len() - 1, 1));
       self
    }
 
 
    /// Draw a rectangle
-   pub fn rectangle(mut self, x: f32, y: f32, width: f32, height: f32) -> Self {
+   pub fn rectangle(self, x: f32, y: f32, width: f32, height: f32) -> Self {
       self
          .move_to(x, y)
          .line_to(x + width, y)
@@ -119,8 +71,31 @@ impl Canvas {
 
    /// Complete the current shape by giving it a fill
    pub fn fill(mut self, red: f32, green: f32, blue: f32, alpha: f32) -> Self {
-      self.figures.push(Figure {fill: (red, green, blue, alpha), paths: self.path_in_progress});
+      self.figures.push(Figure {fill: Fill::SolidColor((red, green, blue, alpha)), paths: self.path_in_progress});
       self.path_in_progress = vec![];
+      self
+   }
+
+
+   pub fn fill_linear_gradient(
+      mut self,
+      begin_x: f32, begin_y: f32,
+      end_x: f32,   end_y: f32,
+      begin_red: f32, begin_green: f32, begin_blue: f32, begin_alpha: f32,
+      end_red: f32,   end_green: f32,   end_blue: f32,   end_alpha: f32,
+   ) -> Self {
+      let begin = Point::new(begin_x, begin_y);
+      let end = Point::new(end_x, end_y);
+      let begin_color = (begin_red, begin_green, begin_blue, begin_alpha);
+      let end_color = (end_red, end_green, end_blue, end_alpha);
+
+      self.figures.push(Figure {
+         fill: Fill::LinearGradient(begin, end, begin_color, end_color),
+         paths: self.path_in_progress
+      });
+
+      self.path_in_progress = vec![];
+
       self
    }
 
@@ -129,7 +104,7 @@ impl Canvas {
    pub fn attach(mut self, other: &Canvas) -> Self {
       let offset = self.points.len();
 
-      self.points.extend(other.points.iter());
+      self.points.extend(other.points.iter().map(|point| *point));
       self.figures.extend(other.figures.iter().map(|figure| {
          Figure {
             fill: figure.fill,
@@ -161,16 +136,17 @@ impl Canvas {
 
 
 
-type Point = (f32, f32);
-type Matrix = [f32; 9];
-// 0 1 2
-// 3 4 5
-// 6 7 8
 
-#[derive(Debug)]
-pub struct Figure {
-  pub fill: (f32, f32, f32, f32),
-  pub paths: Vec<(usize, usize)> // (index, length)
+type Color = (f32, f32, f32, f32);
+
+#[derive(Debug, Copy, Clone)]
+pub(crate) enum Fill {
+   SolidColor(Color),
+   LinearGradient(Point, Point, Color, Color),
 }
 
-
+#[derive(Debug)]
+pub(crate) struct Figure {
+  pub fill: Fill,
+  pub paths: Vec<(usize, usize)> // (index, length)
+}

@@ -6,7 +6,7 @@ use std::ptr;
 use std::str;
 use std::os::raw::c_void;
 use std::ffi::CString;
-use super::canvas::Canvas;
+use super::canvas::{Canvas, Fill};
 
 
 // Shader sources
@@ -14,8 +14,10 @@ static VS_SRC: &'static str = r#"
    #version 150
 
    in vec2 position;
+   out vec2 location;
 
    void main() {
+      location = position;
       gl_Position = vec4(position, 0.0, 1.0);
    }
 "#;
@@ -23,16 +25,43 @@ static VS_SRC: &'static str = r#"
 static FS_SRC: &'static str = r#"
    #version 150
 
+   in vec2 location;
    out vec4 out_color;
-   uniform vec4 color;
+
+   uniform int fill_type;
+   uniform vec4 color_a;
+   uniform vec4 color_b;
+   uniform vec2 point_a;
+   uniform vec2 point_b;
 
    void main() {
-      out_color = color;
+      // Solid Color
+      if (fill_type == 1) {
+         out_color = color_a;
+      }
+
+      // Gradient
+      else if (fill_type == 2) {
+         vec2 difference = point_b - point_a;
+         float multiplier = dot(location - point_a, normalize(difference)) / length(difference);
+
+         out_color = vec4(
+            color_a.r + multiplier * (color_b.r - color_a.r),
+            color_a.g + multiplier * (color_b.g - color_a.g),
+            color_a.b + multiplier * (color_b.b - color_a.b),
+            color_a.a + multiplier * (color_b.a - color_a.a)
+         );
+      }
+
+      // This shouldn't happen. Output a truly awful blue color for debugging purposes.
+      else {
+         out_color = vec4(0.0, 0.0, 1.0, 1.0);
+      }
    }
 "#;
 
 
-pub struct ShaderProgram {
+pub struct Renderer {
    vao: GLuint,
    vbo: GLuint,
    program: GLuint,
@@ -40,7 +69,7 @@ pub struct ShaderProgram {
 
 
 
-impl Drop for ShaderProgram {
+impl Drop for Renderer {
    fn drop(&mut self) {
       unsafe {
          println!("Dropping Shader Program");
@@ -53,8 +82,8 @@ impl Drop for ShaderProgram {
 
 
 
-impl ShaderProgram {
-   pub fn new() -> ShaderProgram {
+impl Renderer {
+   pub fn new() -> Renderer {
       let program = link_program(VS_SRC, FS_SRC);
 
       let mut vao = 0;
@@ -84,7 +113,7 @@ impl ShaderProgram {
 
          gl::BindVertexArray(0);
 
-         ShaderProgram {
+         Renderer {
             vao: vao,
             vbo: vbo,
             program: program,
@@ -109,18 +138,41 @@ impl ShaderProgram {
 
          // Draw each figure in the canvas
          for figure in canvas.figures_iter() {
-            let (red, green, blue, alpha) = figure.fill;
-            let color_str = CString::new("color".as_bytes()).unwrap();
-            gl::Uniform4f(
-               gl::GetUniformLocation(self.program, color_str.as_ptr()),
-               red, green, blue, alpha
-            );
+            match figure.fill {
+               Fill::SolidColor((red, green, blue, alpha)) => {
+                  let fill_type = self.get_uniform_location("fill_type");
+                  let color_a = self.get_uniform_location("color_a");
+                  gl::Uniform1i(fill_type, 1);
+                  gl::Uniform4f(color_a, red, green, blue, alpha);
+               },
+
+               Fill::LinearGradient(begin, end, begin_color, end_color) => {
+                  let fill_type = self.get_uniform_location("fill_type");
+                  let color_a = self.get_uniform_location("color_a");
+                  let color_b = self.get_uniform_location("color_b");
+                  let point_a = self.get_uniform_location("point_a");
+                  let point_b = self.get_uniform_location("point_b");
+                  gl::Uniform1i(fill_type, 2);
+                  gl::Uniform4f(color_a, begin_color.0, begin_color.1, begin_color.2, begin_color.3);
+                  gl::Uniform4f(color_b, end_color.0, end_color.1, end_color.2, end_color.3);
+                  gl::Uniform2f(point_a, begin.x, begin.y);
+                  gl::Uniform2f(point_b, end.x, end.y);
+               }
+            }
 
             // Draw each path in the figure to the buffer
             for &(path_index, path_length) in &figure.paths {
                gl::DrawArrays(gl::TRIANGLE_FAN, path_index as i32, path_length as i32);
             }
          }
+      }
+   }
+
+
+   fn get_uniform_location(&self, name_str: &str) -> GLint {
+      unsafe {
+         let name = CString::new(name_str.as_bytes()).unwrap();
+         gl::GetUniformLocation(self.program, name.as_ptr())
       }
    }
 }
