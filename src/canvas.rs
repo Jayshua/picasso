@@ -1,6 +1,6 @@
 use std::mem;
 use super::geometry;
-use super::geometry::{Point, Matrix, Color};
+use super::geometry::{Point, Matrix};
 
 /// Used to create shapes by calling `line_to` and `move_to`.
 /// Pass this to a Window to render
@@ -31,15 +31,15 @@ impl Canvas {
    }
 
 
-   pub fn translate(mut self, point: Point) -> Self {
-      self.transform = geometry::mul_matrix(self.transform, geometry::translation(point));
+   pub fn translate(mut self, x: f32, y: f32) -> Self {
+      self.transform = geometry::mul_matrix(self.transform, geometry::translation((x, y)));
       self
    }
 
 
    /// Draw a line to the provided points
-   pub fn line_to(mut self, point: Point) -> Self {
-      self.points.push(point);
+   pub fn line_to(mut self, x: f32, y: f32) -> Self {
+      self.points.push((x, y));
 
       if self.path_in_progress.len() == 0 {
          self.path_in_progress.push((self.points.len() - 1, 1));
@@ -52,17 +52,17 @@ impl Canvas {
 
 
    /// Move the virtual "pen" to new coordinates without connecting them with a line
-   pub fn move_to(mut self, point: Point) -> Self {
-      self.points.push(point);
+   pub fn move_to(mut self, x: f32, y: f32) -> Self {
+      self.points.push((x, y));
       self.path_in_progress.push((self.points.len() - 1, 1));
       self
    }
 
 
    /// Draw a rectangle
-   pub fn rectangle(self, (x, y): Point, width: f32, height: f32) -> Self {
+   pub fn rectangle(self, x: f32, y: f32, width: f32, height: f32) -> Self {
       self
-         .move_to((x, y))
+         .move_to(x, y)
          .line_to(x + width, y)
          .line_to(x + width, y + height)
          .line_to(x, y + height)
@@ -79,11 +79,16 @@ impl Canvas {
 
    pub fn fill_linear_gradient(
       mut self,
-      begin: Point,
-      end: Point,
-      begin_color: Color,
-      end_color: Color,
+      begin_x: f32, begin_y: f32,
+      end_x: f32,   end_y: f32,
+      begin_red: f32, begin_green: f32, begin_blue: f32, begin_alpha: f32,
+      end_red: f32,   end_green: f32,   end_blue: f32,   end_alpha: f32,
    ) -> Self {
+      let begin = (begin_x, begin_y);
+      let end = (end_x, end_y);
+      let begin_color = (begin_red, begin_green, begin_blue, begin_alpha);
+      let end_color = (end_red, end_green, end_blue, end_alpha);
+
       self.figures.push(Figure {
          fill: Fill::LinearGradient(begin, end, begin_color, end_color),
          paths: self.path_in_progress

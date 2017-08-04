@@ -20,11 +20,11 @@ fn main() {
    // rendering like references to the shaders and buffers.
    let picasso_renderer = picasso::Renderer::new();
    let gradiated_rectangle = picasso::Canvas::new()
-      .move_to((0.0, 0.0))
-      .line_to((0.0, 100.0))
-      .line_to((50.0, 50.0))
-      .line_to((100.0, 100.0))
-      .line_to((100.0, 0.0))
+      .move_to(0.0, 0.0)
+      .line_to(0.0, 100.0)
+      .line_to(50.0, 50.0)
+      .line_to(100.0, 100.0)
+      .line_to(100.0, 0.0)
       .fill_linear_gradient(
          0.0, 0.0,
          100.0, 100.0,

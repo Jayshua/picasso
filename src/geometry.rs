@@ -10,12 +10,6 @@ pub type Point = (f32, f32);
 pub type Matrix = [f32; 9];
 
 
-// Color doesn't really belong in this module since it's named "Geometry"
-// But I don't really have a better place for it at the moment.
-// Layout: (red, green, blue, alpha)
-pub type Color = (f32, f32, f32, f32);
-
-
 // Get the identity matrix
 // This could have been a constant, but I went with symmetry with the other matrix construction methods instead.
 pub fn identity() -> Matrix {
