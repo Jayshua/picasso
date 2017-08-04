@@ -161,23 +161,33 @@ impl Renderer {
 
 
    pub fn draw_canvas(&self, window_width: u16, window_height: u16, canvas: &Canvas) {
+      // Drawing a figure takes two steps. First, the figure is drawn to the
+      // stencil buffer. Second, the figure is drawn to the color buffer. This
+      // invokes some neat geometric sorcery that allows drawing concave
+      // polygons without first triangulating them for OpenGL.
+      // See the webpage below for more information on the technique.
+      // http://what-when-how.com/opengl-programming-guide/drawing-filled-concave-polygons-using-the-stencil-buffer-opengl-programming/
       unsafe {
          let (points_buffer, points_buffer_length) = canvas.get_points_buffer();
 
-         // Activate the vertex buffer
+         // Activate the buffer that stores the canvas's points
          gl::BindVertexArray(self.vao);
 
          // Activate the vector drawing program
          gl::UseProgram(self.program);
 
-         // Upload the points to the GPU
+         // Upload the canvas's points to the GPU
          gl::BufferSubData(gl::ARRAY_BUFFER, 0, points_buffer_length as isize, points_buffer as *const c_void);
 
-         // Tell the GPU how big the window is so it can convert pixel coordinates into OpenGL coordinates
+         // Tell the GPU how big the window is so that it can convert pixel coordinates into OpenGL coordinates
          gl::Uniform2f(self.get_uniform_location("viewsize"), window_width as f32, window_height as f32);
+
+         // Invoke the sorcery of Geometry!
+         gl::Enable(gl::STENCIL_TEST);
 
          // Draw each figure in the canvas
          for figure in canvas.figures_iter() {
+            // Tell the GPU what type of fill to use
             match figure.fill {
                Fill::SolidColor((red, green, blue, alpha)) => {
                   let fill_type = self.get_uniform_location("fill_type");
@@ -202,9 +212,23 @@ impl Renderer {
 
             // Draw each path in the figure to the buffer
             for &(path_index, path_length) in &figure.paths {
+               // First draw to the stencil buffer so that concave shapes appear correctly.
+               // It's possible to optimize this call away for convex polygons. Someone should do this at some point.
+               gl::StencilMask(0xff);
+               gl::StencilFunc(gl::ALWAYS, 0, 0xff);
+               gl::StencilOp(gl::INVERT, gl::INVERT, gl::INVERT);
+               gl::ColorMask(gl::FALSE, gl::FALSE, gl::FALSE, gl::FALSE);
+               gl::DrawArrays(gl::TRIANGLE_FAN, path_index as i32, path_length as i32);
+
+               // Draw to the color buffer
+               gl::ColorMask(gl::TRUE, gl::TRUE, gl::TRUE, gl::TRUE);
+               gl::StencilFunc(gl::EQUAL, 0xff, 0xff);
+               gl::StencilOp(gl::KEEP, gl::KEEP, gl::KEEP);
                gl::DrawArrays(gl::TRIANGLE_FAN, path_index as i32, path_length as i32);
             }
          }
+
+         gl::Disable(gl::STENCIL_TEST);
       }
    }
 

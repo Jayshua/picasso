@@ -34,7 +34,7 @@ fn main() {
 
       unsafe {
          gl::ClearColor(0.9, 0.2, 0.2, 1.0);
-         gl::Clear(gl::COLOR_BUFFER_BIT);
+         gl::Clear(gl::COLOR_BUFFER_BIT | gl::STENCIL_BUFFER_BIT);
       }
 
       picasso_renderer.draw_canvas(800, 400, &green_rectangle);

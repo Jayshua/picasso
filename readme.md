@@ -1,2 +1,4 @@
 # Picasso
-Super basic OpenGL backed drawing library. Can draw convex polygons, though concave support wouldn't be too difficult to add.
+Super basic OpenGL backed drawing library.
+
+Note: If your drawing is flashing, you may have forgotten to clear the `stencil_buffer_bit`
