@@ -20,8 +20,8 @@ fn main() {
    // rendering like references to the shaders and buffers.
    let picasso_renderer = picasso::Renderer::new();
    let green_rectangle = picasso::Canvas::new()
-      .rectangle(10.0, 10.0, 100.0, 100.0)
-      .fill(0.2, 0.8, 0.2, 1.0);
+      .rectangle((10.0, 10.0), 100.0, 100.0)
+      .fill((0.2, 0.8, 0.2, 1.0));
 
    let mut running = true;
    while running {
