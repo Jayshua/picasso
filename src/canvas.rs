@@ -1,6 +1,6 @@
 use std::mem;
-use super::geometry::Matrix;
-use super::geometry::Point;
+use super::geometry;
+use super::geometry::{Point, Matrix};
 
 /// Used to create shapes by calling `line_to` and `move_to`.
 /// Pass this to a Window to render
@@ -20,26 +20,26 @@ impl Canvas {
          points: vec![],
          figures: vec![],
          path_in_progress: vec![],
-         transform: Matrix::identity(),
+         transform: geometry::identity(),
       }
    }
 
 
    pub fn rotate(mut self, angle: f32) -> Self {
-      self.transform = self.transform * Matrix::from_rotation(angle);
+      self.transform = geometry::mul_matrix(self.transform, geometry::rotation(angle));
       self
    }
 
 
    pub fn translate(mut self, x: f32, y: f32) -> Self {
-      self.transform = self.transform * Matrix::from_translation(x, y);
+      self.transform = geometry::mul_matrix(self.transform, geometry::translation((x, y)));
       self
    }
 
 
    /// Draw a line to the provided points
    pub fn line_to(mut self, x: f32, y: f32) -> Self {
-      self.points.push(Point::new(x, y));
+      self.points.push((x, y));
 
       if self.path_in_progress.len() == 0 {
          self.path_in_progress.push((self.points.len() - 1, 1));
@@ -53,7 +53,7 @@ impl Canvas {
 
    /// Move the virtual "pen" to new coordinates without connecting them with a line
    pub fn move_to(mut self, x: f32, y: f32) -> Self {
-      self.points.push(Point::new(x, y));
+      self.points.push((x, y));
       self.path_in_progress.push((self.points.len() - 1, 1));
       self
    }
@@ -84,8 +84,8 @@ impl Canvas {
       begin_red: f32, begin_green: f32, begin_blue: f32, begin_alpha: f32,
       end_red: f32,   end_green: f32,   end_blue: f32,   end_alpha: f32,
    ) -> Self {
-      let begin = Point::new(begin_x, begin_y);
-      let end = Point::new(end_x, end_y);
+      let begin = (begin_x, begin_y);
+      let end = (end_x, end_y);
       let begin_color = (begin_red, begin_green, begin_blue, begin_alpha);
       let end_color = (end_red, end_green, end_blue, end_alpha);
 

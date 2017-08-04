@@ -196,7 +196,8 @@ impl Renderer {
                   gl::Uniform4f(color_a, red, green, blue, alpha);
                },
 
-               Fill::LinearGradient(begin, end, begin_color, end_color) => {
+               // bx = begin x, ex = end x
+               Fill::LinearGradient((bx, by), (ex, ey), begin_color, end_color) => {
                   let fill_type = self.get_uniform_location("fill_type");
                   let color_a = self.get_uniform_location("color_a");
                   let color_b = self.get_uniform_location("color_b");
@@ -205,8 +206,8 @@ impl Renderer {
                   gl::Uniform1i(fill_type, 2);
                   gl::Uniform4f(color_a, begin_color.0, begin_color.1, begin_color.2, begin_color.3);
                   gl::Uniform4f(color_b, end_color.0, end_color.1, end_color.2, end_color.3);
-                  gl::Uniform2f(point_a, begin.x, begin.y);
-                  gl::Uniform2f(point_b, end.x, end.y);
+                  gl::Uniform2f(point_a, bx, by);
+                  gl::Uniform2f(point_b, ex, ey);
                }
             }
 
