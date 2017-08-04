@@ -20,10 +20,10 @@ fn main() {
    // rendering like references to the shaders and buffers.
    let picasso_renderer = picasso::Renderer::new();
    let gradiated_rectangle = picasso::Canvas::new()
-      .rectangle(-0.5, -0.5, 0.5, 0.5)
-      .fill_gradient(
-         -0.5, -0.5,
-         0.5, 0.5,
+      .rectangle(0.0, 0.0, 100.0, 100.0)
+      .fill_linear_gradient(
+         0.0, 0.0,
+         100.0, 100.0,
          0.1, 1.0, 0.1, 1.0,
          0.1, 0.1, 1.0, 1.0,
       );
@@ -43,7 +43,7 @@ fn main() {
          gl::Clear(gl::COLOR_BUFFER_BIT);
       }
 
-      picasso_renderer.draw_canvas(&gradiated_rectangle);
+      picasso_renderer.draw_canvas(800, 400, &gradiated_rectangle);
       window.swap_buffers().unwrap();
    }
 }

@@ -20,7 +20,7 @@ fn main() {
    // rendering like references to the shaders and buffers.
    let picasso_renderer = picasso::Renderer::new();
    let green_rectangle = picasso::Canvas::new()
-      .rectangle(0.0, 0.0, 0.5, 0.5)
+      .rectangle(10.0, 10.0, 100.0, 100.0)
       .fill(0.2, 0.8, 0.2, 1.0);
 
    let mut running = true;
@@ -37,7 +37,7 @@ fn main() {
          gl::Clear(gl::COLOR_BUFFER_BIT);
       }
 
-      picasso_renderer.draw_canvas(&green_rectangle);
+      picasso_renderer.draw_canvas(800, 400, &green_rectangle);
       window.swap_buffers().unwrap();
    }
 }

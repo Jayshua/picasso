@@ -13,26 +13,62 @@ use super::canvas::{Canvas, Fill};
 static VS_SRC: &'static str = r#"
    #version 150
 
-   in vec2 position;
-   out vec2 location;
+   // Uniforms
+   uniform vec2 viewsize;
+   uniform vec2 point_a;
+   uniform vec2 point_b;
+
+   // Input
+   in vec2 location;
+
+   // Output
+   out VS_OUT {
+      vec2 location;
+      vec2 point_a;
+      vec2 point_b;
+   } vs_out;
+
+   // Prototypes
+   vec2 transform_point(vec2 point);
+
 
    void main() {
-      location = position;
-      gl_Position = vec4(position, 0.0, 1.0);
+      vs_out.location = transform_point(location);
+      vs_out.point_a  = transform_point(point_a);
+      vs_out.point_b  = transform_point(point_b);
+
+      gl_Position = vec4(transform_point(location).xy, 0.0, 1.0);
+   }
+
+
+   // Convert a point in pixel coordinates (from 0 to viewsize.xy)
+   // to a point in OpenGL coordinates (from -1.0 to 1.0)
+   vec2 transform_point(vec2 point) {
+      return vec2(
+          ((point.x / viewsize.x) * 2.0 - 1.0),
+         -((point.y / viewsize.y) * 2.0 - 1.0)
+      );
    }
 "#;
 
 static FS_SRC: &'static str = r#"
    #version 150
 
-   in vec2 location;
-   out vec4 out_color;
-
+   // Uniforms
    uniform int fill_type;
    uniform vec4 color_a;
    uniform vec4 color_b;
-   uniform vec2 point_a;
-   uniform vec2 point_b;
+
+   // Input
+   in VS_OUT {
+      vec2 location;
+      vec2 point_a;
+      vec2 point_b;
+   } fs_in;
+
+   // Output
+   out vec4 out_color;
+
 
    void main() {
       // Solid Color
@@ -42,8 +78,9 @@ static FS_SRC: &'static str = r#"
 
       // Gradient
       else if (fill_type == 2) {
-         vec2 difference = point_b - point_a;
-         float multiplier = dot(location - point_a, normalize(difference)) / length(difference);
+         vec2 difference = fs_in.point_b - fs_in.point_a;
+
+         float multiplier = dot(fs_in.location - fs_in.point_a, normalize(difference)) / length(difference);
 
          out_color = vec4(
             color_a.r + multiplier * (color_b.r - color_a.r),
@@ -123,7 +160,7 @@ impl Renderer {
 
 
 
-   pub fn draw_canvas(&self, canvas: &Canvas) {
+   pub fn draw_canvas(&self, window_width: u16, window_height: u16, canvas: &Canvas) {
       unsafe {
          let (points_buffer, points_buffer_length) = canvas.get_points_buffer();
 
@@ -135,6 +172,9 @@ impl Renderer {
 
          // Upload the points to the GPU
          gl::BufferSubData(gl::ARRAY_BUFFER, 0, points_buffer_length as isize, points_buffer as *const c_void);
+
+         // Tell the GPU how big the window is so it can convert pixel coordinates into OpenGL coordinates
+         gl::Uniform2f(self.get_uniform_location("viewsize"), window_width as f32, window_height as f32);
 
          // Draw each figure in the canvas
          for figure in canvas.figures_iter() {
