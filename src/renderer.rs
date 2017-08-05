@@ -24,6 +24,7 @@ static VS_SRC: &'static str = r#"
    // Output
    out VS_OUT {
       vec2 location;
+      vec2 original_location;
       vec2 point_a;
       vec2 point_b;
    } vs_out;
@@ -33,6 +34,7 @@ static VS_SRC: &'static str = r#"
 
 
    void main() {
+      vs_out.original_location = location;
       vs_out.location = transform_point(location);
       vs_out.point_a  = transform_point(point_a);
       vs_out.point_b  = transform_point(point_b);
@@ -65,6 +67,7 @@ static FS_SRC: &'static str = r#"
    // Input
    in VS_OUT {
       vec2 location;
+      vec2 original_location;
       vec2 point_a;
       vec2 point_b;
    } fs_in;
@@ -96,8 +99,8 @@ static FS_SRC: &'static str = r#"
       // Image
       else if (fill_type == 3) {
          vec2 texture_location = vec2(
-            point_a.x / point_b.x,
-            -(point_a.y / point_b.y)
+            (fs_in.original_location.x - point_a.x) / point_b.x,
+            (fs_in.original_location.y - point_a.y) / point_b.y
          );
 
          out_color = texture(texture_a, texture_location);
