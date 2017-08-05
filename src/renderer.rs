@@ -58,6 +58,9 @@ static FS_SRC: &'static str = r#"
    uniform int fill_type;
    uniform vec4 color_a;
    uniform vec4 color_b;
+   uniform vec2 point_a;
+   uniform vec2 point_b;
+   uniform sampler2D texture_a;
 
    // Input
    in VS_OUT {
@@ -90,9 +93,19 @@ static FS_SRC: &'static str = r#"
          );
       }
 
-      // This shouldn't happen. Output a truly awful blue color for debugging purposes.
+      // Image
+      else if (fill_type == 3) {
+         vec2 texture_location = vec2(
+            point_a.x / point_b.x,
+            -(point_a.y / point_b.y)
+         );
+
+         out_color = texture(texture_a, texture_location);
+      }
+
+      // This shouldn't happen. Output a truly awful green color for debugging purposes.
       else {
-         out_color = vec4(0.0, 0.0, 1.0, 1.0);
+         out_color = vec4(0.3, 1.0, 0.0, 1.0);
       }
    }
 "#;
@@ -207,7 +220,18 @@ impl Renderer {
                   gl::Uniform4f(color_b, end_color.0, end_color.1, end_color.2, end_color.3);
                   gl::Uniform2f(point_a, begin.x, begin.y);
                   gl::Uniform2f(point_b, end.x, end.y);
-               }
+               },
+
+               Fill::Image(ref image, location, width, height) => {
+                  let fill_type = self.get_uniform_location("fill_type");
+                  let image_a = self.get_uniform_location("image_a");
+                  let point_a = self.get_uniform_location("point_a");
+                  let point_b = self.get_uniform_location("point_b");
+                  gl::Uniform1i(fill_type, 3);
+                  gl::Uniform1i(image_a, image.texture_id as i32);
+                  gl::Uniform2f(point_a, location.x, location.y);
+                  gl::Uniform2f(point_b, width, height);
+               },
             }
 
             // Draw each path in the figure to the buffer

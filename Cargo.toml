@@ -6,6 +6,7 @@ authors = ["Jayshua Nelson <me@jayshuanelson.com>"]
 
 [dependencies]
 gl = "0.6.3"
+imagefmt = "4.0.0"
 
 [dev_dependencies]
 glutin = "0.9.2"

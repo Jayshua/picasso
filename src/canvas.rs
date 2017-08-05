@@ -1,6 +1,8 @@
 use std::mem;
+use std::rc::Rc;
 use super::geometry::Matrix;
 use super::geometry::Point;
+use super::Image;
 
 /// Used to create shapes by calling `line_to` and `move_to`.
 /// Pass this to a Window to render
@@ -77,6 +79,18 @@ impl Canvas {
    }
 
 
+   pub fn fill_image(mut self, image: Rc<Image>, x: f32, y: f32, width: f32, height: f32) -> Self {
+      self.figures.push(Figure {
+         fill: Fill::Image(image, Point::new(x, y), width, height),
+         paths: self.path_in_progress,
+      });
+
+      self.path_in_progress = vec![];
+
+      self
+   }
+
+
    pub fn fill_linear_gradient(
       mut self,
       begin_x: f32, begin_y: f32,
@@ -107,7 +121,7 @@ impl Canvas {
       self.points.extend(other.points.iter().map(|point| *point));
       self.figures.extend(other.figures.iter().map(|figure| {
          Figure {
-            fill: figure.fill,
+            fill: figure.fill.clone(),
             paths: figure.paths.iter().map(|&(index, length)| (index + offset, length)).collect()
          }
       }));
@@ -139,10 +153,11 @@ impl Canvas {
 
 type Color = (f32, f32, f32, f32);
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Clone)]
 pub(crate) enum Fill {
    SolidColor(Color),
    LinearGradient(Point, Point, Color, Color),
+   Image(Rc<Image>, Point, f32, f32),
 }
 
 #[derive(Debug)]

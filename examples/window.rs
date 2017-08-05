@@ -10,7 +10,7 @@ pub fn create_window() -> (glutin::EventsLoop, glutin::GlWindow) {
    let events_loop = glutin::EventsLoop::new();
 
    let window = glutin::WindowBuilder::new()
-      .with_title("Picasso Rectangles")
+      .with_title("Picasso Example")
       .with_dimensions(800, 400);
 
    let context = glutin::ContextBuilder::new()
