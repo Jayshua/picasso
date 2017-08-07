@@ -5,8 +5,9 @@ authors = ["Jayshua Nelson <me@jayshuanelson.com>"]
 
 
 [dependencies]
-gl = "0.6.3"
-imagefmt = "4.0.0"
+gl = "^0.6"
+imagefmt = "^4.0"
+rusttype = "^0.2"
 
 [dev_dependencies]
-glutin = "0.9.2"
+glutin = "^0.9"
